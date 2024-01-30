@@ -12,7 +12,7 @@ server.Start();
 
 Socket socket = server.AcceptSocket(); // wait for client
 
-string response = "+PONG" + Environment.NewLine;
+string response = "+PONG\r\n";
 
 Byte[] bytes = Encoding.ASCII.GetBytes(response);
 
