@@ -18,6 +18,4 @@ while (true) {
     Byte[] bytes = Encoding.ASCII.GetBytes(response);
 
     int i = socket.Send(bytes);
-    
-    socket.Close();
 }
