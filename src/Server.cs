@@ -29,7 +29,7 @@ while (true) {
         final += response;
     }
 
-    byte[] bytes = Encoding.ASCII.GetBytes(final);
+    byte[] bytes = Encoding.ASCII.GetBytes(response);
 
     int i = socket.Send(bytes);
 }
