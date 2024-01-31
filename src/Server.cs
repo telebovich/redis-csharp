@@ -10,10 +10,14 @@ TcpListener server = new TcpListener(IPAddress.Any, 6379);
 
 server.Start();
 
-Socket socket = server.AcceptSocket(); // wait for client
+while (true) {
+    Socket socket = server.AcceptSocket(); // wait for client
 
-string response = "+PONG\r\n";
+    string response = "+PONG\r\n";
 
-Byte[] bytes = Encoding.ASCII.GetBytes(response);
+    Byte[] bytes = Encoding.ASCII.GetBytes(response);
 
-int i = socket.Send(bytes);
+    int i = socket.Send(bytes);
+    
+    socket.Close();
+}
