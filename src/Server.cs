@@ -8,35 +8,42 @@ Console.WriteLine("Logs from your program will appear here!");
 // Uncomment this block to pass the first stage
 TcpListener server = new TcpListener(IPAddress.Any, 6379);
 
-server.Start();
+try 
+{
+    server.Start();
 
-string final = "";
-
-string response = "+PONG\r\n";
-
-while (true) {
-    Socket socket = server.AcceptSocket(); // wait for client
-
-    byte[] buffer = new byte[socket.SendBufferSize];
-
-    int bytesRead = socket.Receive(buffer);
-
-    if (bytesRead < buffer.Length)
+    while (true)
     {
-        Array.Resize(ref buffer, bytesRead);
+        using TcpClient handler = await server.AcceptTcpClientAsync();
+
+        await using NetworkStream stream = handler.GetStream();
+
+        byte[] buffer = new byte[1024];
+
+        int received = await stream.ReadAsync(buffer);
+        
+        string responseMessage = "";
+
+        string response = "+PONG\r\n";
+
+        string message = Encoding.ASCII.GetString(buffer, 0, received);
+                
+        string[] dataMessages = message.Split('\n');
+
+        foreach (string m in dataMessages) {
+            responseMessage += response;
+        }
+
+        byte[] bytes = Encoding.ASCII.GetBytes(responseMessage);
+
+        await stream.WriteAsync(bytes);
     }
-
-    string data = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-
-    Console.WriteLine("Received message: {0}", data);
-    
-    string[] dataMessages = data.Split('\n');
-
-    foreach (string message in dataMessages) {
-        final += response;
-    }
-
-    byte[] bytes = Encoding.ASCII.GetBytes(response);
-
-    int i = socket.Send(bytes);
+}
+catch (Exception ex)
+{
+    Console.WriteLine(ex.Message);
+}
+finally
+{
+    server.Stop();
 }
