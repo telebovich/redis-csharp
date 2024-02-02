@@ -22,19 +22,11 @@ try
 
         int received = await stream.ReadAsync(buffer);
         
-        string responseMessage = "";
-
         string response = "+PONG\r\n";
 
         string message = Encoding.ASCII.GetString(buffer, 0, received);
                 
-        string[] dataMessages = message.Split('\n');
-
-        foreach (string m in dataMessages) {
-            responseMessage += response;
-        }
-
-        byte[] bytes = Encoding.ASCII.GetBytes(responseMessage);
+        byte[] bytes = Encoding.ASCII.GetBytes(response);
 
         await stream.WriteAsync(bytes);
     }
