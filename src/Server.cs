@@ -10,8 +10,6 @@ TcpListener server = new TcpListener(IPAddress.Any, 6379);
 
 server.Start();
 
-byte[] buffer = new byte[1024];
-
 string final = "";
 
 string response = "+PONG\r\n";
@@ -19,9 +17,18 @@ string response = "+PONG\r\n";
 while (true) {
     Socket socket = server.AcceptSocket(); // wait for client
 
-    int messageLength = socket.Receive(buffer);
+    byte[] buffer = new byte[socket.SendBufferSize];
 
-    string data = Encoding.ASCII.GetString(buffer, 0, messageLength);
+    int bytesRead = socket.Receive(buffer);
+
+    if (bytesRead < buffer.Length)
+    {
+        Array.Resize(ref buffer, bytesRead);
+    }
+
+    string data = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+
+    Console.WriteLine("Received message: {0}", data);
     
     string[] dataMessages = data.Split('\n');
 
