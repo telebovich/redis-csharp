@@ -12,11 +12,12 @@ try
 {
     server.Start();
 
+    using TcpClient handler = await server.AcceptTcpClientAsync();
+
+    await using NetworkStream stream = handler.GetStream();
+
     while (true)
     {
-        using TcpClient handler = await server.AcceptTcpClientAsync();
-
-        await using NetworkStream stream = handler.GetStream();
 
         byte[] buffer = new byte[1024];
 
@@ -36,7 +37,7 @@ try
         while (stream.DataAvailable);
         
         Console.WriteLine(messageBuilder.ToString());
-        
+
         string response = "+PONG\r\n";
 
         byte[] bytes = Encoding.ASCII.GetBytes(response);
