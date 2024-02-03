@@ -20,12 +20,25 @@ try
 
         byte[] buffer = new byte[1024];
 
-        int received = await stream.ReadAsync(buffer);
+        StringBuilder messageBuilder = new();
+
+        do
+        {
+            int received = await stream.ReadAsync(buffer);
+
+            if (received > 0)
+            {
+                string receivedData = Encoding.ASCII.GetString(buffer, 0, received);
+                
+                messageBuilder.Append(receivedData);
+            }
+        }
+        while (stream.DataAvailable);
+        
+        Console.WriteLine(messageBuilder.ToString());
         
         string response = "+PONG\r\n";
 
-        string message = Encoding.ASCII.GetString(buffer, 0, received);
-                
         byte[] bytes = Encoding.ASCII.GetBytes(response);
 
         await stream.WriteAsync(bytes);
