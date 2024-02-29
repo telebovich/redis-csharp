@@ -1,6 +1,40 @@
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
+
+var HandleClient = (TcpClient client) =>
+{
+    NetworkStream stream = client.GetStream();
+
+    byte[] buffer = new byte[1024];
+
+    while (true)
+    {
+        StringBuilder messageBuilder = new();
+
+        do
+        {
+            int received = stream.Read(buffer);
+
+            if (received > 0)
+            {
+                string receivedData = Encoding.ASCII.GetString(buffer, 0, received);
+
+                messageBuilder.Append(receivedData);
+            }
+        }
+        while (stream.DataAvailable);
+
+        Console.WriteLine(messageBuilder.ToString());
+
+        string response = "+PONG\r\n";
+
+        byte[] bytes = Encoding.ASCII.GetBytes(response);
+
+        stream.Write(bytes);
+    }
+};
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 Console.WriteLine("Logs from your program will appear here!");
@@ -12,44 +46,14 @@ try
 {
     server.Start();
 
-    using TcpClient handler = await server.AcceptTcpClientAsync();
-
-    await using NetworkStream stream = handler.GetStream();
-
     while (true)
     {
+        TcpClient tcpClient = await server.AcceptTcpClientAsync();
 
-        byte[] buffer = new byte[1024];
-
-        StringBuilder messageBuilder = new();
-
-        do
-        {
-            int received = await stream.ReadAsync(buffer);
-
-            if (received > 0)
-            {
-                string receivedData = Encoding.ASCII.GetString(buffer, 0, received);
-                
-                messageBuilder.Append(receivedData);
-            }
-        }
-        while (stream.DataAvailable);
-        
-        Console.WriteLine(messageBuilder.ToString());
-
-        string response = "+PONG\r\n";
-
-        byte[] bytes = Encoding.ASCII.GetBytes(response);
-
-        await stream.WriteAsync(bytes);
+        new Thread(() => HandleClient(tcpClient)).Start();
     }
 }
 catch (Exception ex)
 {
     Console.WriteLine(ex.Message);
-}
-finally
-{
-    server.Stop();
 }
