@@ -5,7 +5,11 @@ using System.Text;
 
 var ProcessPing = (string s) =>
 {
-    return "+PONG\r\n";
+    return s.ToLower() switch
+    {
+        "ping" => "+PONG\r\n",
+        _ => string.Format("${0}\r\n{1}\r\n", s.Length - 5, s.Substring(5)),
+    };
 };
 
 var ProcessEcho = (string s) =>
