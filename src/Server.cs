@@ -3,36 +3,52 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 
+var ProcessPing = (string s) =>
+{
+    return "+PONG\r\n";
+};
+
+var ProcessEcho = (string s) =>
+{
+    return string.Format("${0}\r\n{1}\r\n", s.Length - 5, s.Substring(5));
+};
+
 var HandleClient = (TcpClient client) =>
 {
-    NetworkStream stream = client.GetStream();
-
-    byte[] buffer = new byte[1024];
-
-    while (true)
+    using (NetworkStream stream = client.GetStream())
     {
-        StringBuilder messageBuilder = new();
+        byte[] buffer = new byte[1024];
 
-        do
+        while (true)
         {
-            int received = stream.Read(buffer);
+            StringBuilder messageBuilder = new();
 
-            if (received > 0)
+            do
             {
-                string receivedData = Encoding.ASCII.GetString(buffer, 0, received);
+                int received = stream.Read(buffer);
 
-                messageBuilder.Append(receivedData);
+                if (received > 0)
+                {
+                    string receivedData = Encoding.ASCII.GetString(buffer, 0, received);
+
+                    messageBuilder.Append(receivedData);
+                }
             }
+            while (stream.DataAvailable);
+
+            var command = messageBuilder.ToString();
+
+            // wtf
+            var response = command.ToLower() switch
+            {
+                var s when s.StartsWith("ping") => ProcessPing(s),
+                var s when s.StartsWith("echo") => ProcessEcho(s)
+            };
+
+            byte[] bytes = Encoding.ASCII.GetBytes(response);
+
+            stream.Write(bytes);
         }
-        while (stream.DataAvailable);
-
-        Console.WriteLine(messageBuilder.ToString());
-
-        string response = "+PONG\r\n";
-
-        byte[] bytes = Encoding.ASCII.GetBytes(response);
-
-        stream.Write(bytes);
     }
 };
 
@@ -48,9 +64,10 @@ try
 
     while (true)
     {
-        TcpClient tcpClient = await server.AcceptTcpClientAsync();
-
-        new Thread(() => HandleClient(tcpClient)).Start();
+        using (TcpClient tcpClient = await server.AcceptTcpClientAsync())
+        {
+            new Thread(() => HandleClient(tcpClient)).Start();
+        }
     }
 }
 catch (Exception ex)
