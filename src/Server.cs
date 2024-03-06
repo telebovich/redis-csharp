@@ -46,7 +46,8 @@ var HandleClient = (TcpClient client) =>
         var response = command.ToLower() switch
         {
             var s when s.StartsWith("ping") => ProcessPing(s),
-            var s when s.StartsWith("echo") => ProcessEcho(s)
+            var s when s.StartsWith("echo") => ProcessEcho(s),
+            _ => throw new ArgumentException(String.Format("Received unknown redis command: {0}", command)),
         };
 
         byte[] bytes = Encoding.ASCII.GetBytes(response);
