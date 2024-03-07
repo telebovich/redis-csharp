@@ -3,6 +3,56 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 
+var ParseLength = (byte[] bytes, int start) =>
+{
+    int len = 0;
+    int i = start + 1;
+    int consumed = 1;
+
+    // 0x0D is '\r' hex value
+    while (bytes[i] != 0x0D)
+    {
+        len = (len * 10) + (bytes[i] - '0');
+        i++;
+        consumed++;
+    }
+
+    // + 2 to account for ending '\r\n'
+    return (len, consumed + 2);
+};
+
+var ParseBulkStr = (Byte[] bytes, int start) =>
+{
+    var (len, consumed) = ParseLength(bytes, start);
+    Byte[] payload = new Byte[len];
+    Array.Copy(bytes, start + consumed, payload, 0, len);
+    var parsed = Encoding.ASCII.GetString(payload);
+    // Console.WriteLine("ParsedBulkStr: {0}", parsed);
+
+    // + 2 to account for ending '\r\n'
+    return (parsed, consumed + len + 2);
+};
+
+var ParseClientMsg = (Byte[] msg) =>
+{
+    // Console.WriteLine("Client msg: {0}", Encoding.ASCII.GetString(msg));
+
+    var (bulkStrsToParse, cursor) = ParseLength(msg, 0);
+    String bulkStr = "";
+
+    for (int i = 0; i < bulkStrsToParse; i++)
+    {
+        // Console.WriteLine("Cursor: {0}", cursor);
+        var (str, consumed) = ParseBulkStr(msg, cursor);
+        bulkStr += (str + " ");
+        cursor += consumed;
+    }
+    bulkStr = bulkStr.TrimEnd();
+
+    // Console.WriteLine("BulkStr: {0}", bulkStr);
+    return bulkStr;
+};
+
 var ProcessPing = (string s) =>
 {
     return s.ToLower() switch
@@ -25,29 +75,23 @@ var HandleClient = (TcpClient client) =>
 
     while (true)
     {
-        StringBuilder messageBuilder = new();
+        int bytesRead = stream.Read(buffer);
 
-        do
+        if (bytesRead == 0) return;
+
+        if (bytesRead < buffer.Length)
         {
-            int received = stream.Read(buffer);
-
-            if (received > 0)
-            {
-                string receivedData = Encoding.ASCII.GetString(buffer, 0, received);
-
-                messageBuilder.Append(receivedData);
-            }
+            Array.Resize(ref buffer, bytesRead);
         }
-        while (stream.DataAvailable);
 
-        var command = messageBuilder.ToString();
+        String command = ParseClientMsg(buffer);
 
         // wtf
         var response = command.ToLower() switch
         {
             var s when s.StartsWith("ping") => ProcessPing(s),
             var s when s.StartsWith("echo") => ProcessEcho(s),
-            _ => throw new ArgumentException(String.Format("Received unknown redis command: {0}", command)),
+            _ => throw new ArgumentException(string.Format("Received unknown redis command: {0}", command)),
         };
 
         byte[] bytes = Encoding.ASCII.GetBytes(response);
